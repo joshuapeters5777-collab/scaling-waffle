@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import express from 'express';
 import { serviceSupabase, supabase, SUPABASE_PRODUCTS_TABLE } from '../lib/supabase.js';
-import { verifyAdmin } from '../middlewares/adminAuth.js';
+import { signAdminToken, verifyAdmin } from '../middlewares/adminAuth.js';
 import { sendOrderEmails } from '../services/emailService.js';
 import { env } from '../env.js';
 
@@ -162,6 +162,33 @@ router.post('/payfast/notify', (req, res) => {
 // =========================================================================
 // --- PROTECTED ADMIN ROUTES ---
 // =========================================================================
+
+router.post('/admin/login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const expectedEmail = (env.ADMIN_EMAIL || 'joshuapeters5777@gmail.com').toLowerCase();
+    const expectedPassword = env.ADMIN_PASSWORD || 'atelier-admin-2026';
+
+    if (String(email || '').trim().toLowerCase() !== expectedEmail) {
+      return res.status(401).json({ success: false, message: 'Invalid admin credentials.' });
+    }
+
+    if (String(password || '') !== expectedPassword) {
+      return res.status(401).json({ success: false, message: 'Invalid admin credentials.' });
+    }
+
+    const token = signAdminToken({ email: String(email).trim() });
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin sign-in successful.',
+      token,
+      email: String(email).trim(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // 4. POST NEW PRODUCT (Create)
 router.post('/products', verifyAdmin, async (req, res, next) => {
